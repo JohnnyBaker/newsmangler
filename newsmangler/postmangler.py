@@ -141,6 +141,8 @@ class PostMangler:
         # Generate the list of articles we need to post
         self.generate_article_list(postme)
         
+        self._size = len(self._articles) * self.conf['posting']['article_size']
+
         # If we have no valid articles, bail
         if not self._articles:
             self.logger.warning('No valid articles to post!')
@@ -152,9 +154,13 @@ class PostMangler:
         # And loop
         self._bytes = 0
         last_stuff = start = time.time()
+        a_processed = avg_speeds = []
+        aleft = left = len(self._articles)
         
         self.logger.info('Posting %d article(s)...', len(self._articles))
         
+        stime = interval_time = time.time()
+        ltime = "inf."
         while 1:
             now = time.time()
             
@@ -167,26 +173,79 @@ class PostMangler:
                 article = self._articles.pop(0)
                 conn.post_article(article)
             
+            # Calculate number of article sent every second
+            # Initialistion temps reference pour le comptage des articles postes
+            # calcul interval de temps ecoule depuis temps de ref
+            # mise a jour ltime
+            # assigner nouveau temps ref
+            if aleft - left > 10:
+                # Get time between last 'remaining time' calculation and now
+                diff = time.time() - stime
+                #print "articles processed %s in %.2f\n"%((aleft - left),diff),
+                # Store processed articles since last 'remaining time' calculation
+                a_processed.append(int(aleft - left))
+                # In order to have a good average remaining time value, maybe compared articles processed with upload speed
+                #a_processed.sort()
+                avg_speeds.append(float(sum(a_processed)) / float(len(a_processed)) / float(diff))
+                # Calculate average speeds in order to not have too differents values
+                if avg_speeds:
+                    # Average process
+                    m = float(sum(avg_speeds)) / float(len(avg_speeds))
+                    # Store for next use
+                    aleft = left
+                    # Calculate remaining time for remaining articles
+                    if m:
+                        ltime = float(left) / (float(m))
+                    # Avoid too big lists. Useful ?
+                    if len(a_processed) > 10000:
+                        a_processed.pop(0)
+                        avg_speeds.pop(0)
+                # Get time to calculate number of articles processed in 1 secondes in the next loop
+                stime = interval_time = time.time()
+            elif type(ltime) in (int,float): # if processed articles don't reach 10, decrease remaining time !! TOFIX
+                ltime -= time.time() - interval_time
+                interval_time = time.time()
+
             # Do some stuff every now and then
             if now - last_stuff >= 0.5:
+                #diff = float(1) / float(now - last_stuff)
                 last_stuff = now
                 
                 for conn in self._conns:
-                    conn.reconnect_check(now)
+                	conn.reconnect_check(now)
                 
+
                 if self._bytes:
                     interval = time.time() - start
-                    speed = self._bytes / interval / 1024
+                    pleft = left
                     left = len(self._articles) + (len(self._conns) - len(self._idle))
-                    print('%d article(s) remaining - %.1fKB/s     \r' % (left, speed))
+                    #article_speed = (pleft - left) / (time.time() - stime)
+                    #article_avg_speed += article_speed
+                    #article_avg_speed = article_avg_speed / 2
+                    #ltime = article_speed and (left / article_speed) or "inf."
+                    speed = self._bytes / interval / 1024
+                    #avg_speed += speed
+                    #avg_speed = avg_speed / 2
+                    #rsize = self._size - self._bytes
+                    #ltime = rsize / 1024 / speed
+                    if type(ltime) in (int,float):
+                        if ltime > 60:
+                            rtime = "%s minutes %s secondes"%(int(ltime/60),int((float(ltime/60) - int(ltime/60)) * 60))
+                            #rtime = "%s minutes"%int(ltime/60)
+                        else:
+                            rtime = "%s secondes"%int(ltime)
+                    else:
+                        rtime = 'inf.'
+
+                    print '%d article(s) remaining - time left %s  - %.1fKB/s     \r' % (left,rtime, speed),
                     sys.stdout.flush()
             
             # All done?
             if len(self._articles) == 0 and len(self._idle) == self.conf['server']['connections']:
                 interval = time.time() - start
                 speed = self._bytes / interval
-                self.logger.info('Posting complete - %s in %s (%s/s)',
-                    NiceSize(self._bytes), NiceTime(interval), NiceSize(speed))
+                self.logger.info('Posting complete - %s (%s) in %s (%s/s)',
+                    NiceSize(self._bytes),self._bytes, NiceTime(interval), NiceSize(speed))
                 
                 # If we have some msgids left over, we might have to generate
                 # a .NZB
@@ -375,3 +434,4 @@ class PostMangler:
         self.logger.info('End generation of %s', filename)
 
 # ---------------------------------------------------------------------------
+
