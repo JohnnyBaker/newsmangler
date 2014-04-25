@@ -1,21 +1,13 @@
-==================
-**IMPORTANT NOTE**
-==================
-This project is no longer being actively maintained. It still works fine but no
-new features will ever be appearing. Check out `my GoPostStuff project <https://github.com/madcowfred/GoPostStuff/>`_
-for a new and much scarier version of the idea.
-
-
-
 newsmangler
 ===========
 
 newsmangler is a basic client for posting binaries to Usenet. The only notable
 feature is multiple connection support to efficiently utilize modern bandwidth.
+It supports SSL connection !
 
 Installation
 ============
-#. Download the source: ``git clone git://github.com/madcowfred/newsmangler.git``
+#. Download the source: ``git clone git://github.com/nicors57/newsmangler.git``
    (or download a .zip I guess).
 
 #. Copy sample.conf to ~/.newsmangler.conf, edit the options as appropriate.
