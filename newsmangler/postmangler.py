@@ -82,6 +82,9 @@ class PostMangler:
             self.logger.info('Using FakePoll() for sockets')
 
         self.conf['posting']['skip_filenames'] = self.conf['posting'].get('skip_filenames', '').split()
+        self.ssl = self.conf['server'].get('ssl')
+        if self.ssl:
+            self.logger.info("SSL enabled. Connections can take more time to be established.")
         
         self._articles = []
         self._files = {}
@@ -97,6 +100,7 @@ class PostMangler:
     # -----------------------------------------------------------------------
     # Connect all of our connections
     def connect(self):
+
         for i in range(self.conf['server']['connections']):
             conn = asyncnntp.asyncNNTP(self, i, 
                 self.conf['server']['hostname'],
@@ -104,6 +108,7 @@ class PostMangler:
                 None, 
                 self.conf['server']['username'],
                 self.conf['server']['password'],
+                self.ssl
             )
             conn.do_connect()
             self._conns.append(conn)
