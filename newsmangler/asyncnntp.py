@@ -35,7 +35,6 @@ import select
 import socket
 import time
 from nntplib import *
-import StringIO
 import tempfile
 import sys
 
@@ -63,7 +62,7 @@ import select
 
 class SSLConnection(object):
     def __init__(self, *args):
-        self._ssl_conn = apply(_ssl.Connection, args)
+        self._ssl_conn = _ssl.Connection(*args)
         self._lock = _RLock()
 
     for f in ('get_context', 'pending', 'send', 'write', 'recv', 'read',
@@ -74,12 +73,12 @@ class SSLConnection(object):
               'sock_shutdown', 'get_peer_certificate', 'want_read',
               'want_write', 'set_connect_state', 'set_accept_state',
               'connect_ex', 'sendall', 'do_handshake', 'settimeout'):
-        exec """def %s(self, *args):
+        exec("""def %s(self, *args):
             self._lock.acquire()
             try:
-                return apply(self._ssl_conn.%s, args)
+                return self._ssl_conn.%s(* args)
             finally:
-                self._lock.release()\n""" % (f, f)
+                self._lock.release()\n""" % (f, f))
 
 # ---------------------------------------------------------------------------
 
@@ -154,7 +153,7 @@ class asyncNNTP(asyncore.dispatcher):
             # Try to connect. This can blow up!
             try:
                 self.connect((self.host, self.port))
-            except (socket.error, socket.gaierror), msg:
+            except (socket.error, socket.gaierror) as msg:
                 self.really_close(msg)
             else:
                 # Handshake
@@ -277,13 +276,13 @@ class asyncNNTP(asyncore.dispatcher):
     def handle_read(self):
         self.logger.debug('handle_read')
         try:
-            self._readbuf += self.recv(16384)
-        except socket.error, msg:
+            self._readbuf = b"".join([self._readbuf,self.recv(16384)])
+        except socket.error as msg:
             self.really_close(msg)
             return
         
         # Split the buffer into lines. Last line is always incomplete.
-        lines = self._readbuf.split('\r\n')
+        lines = self._readbuf.split(b'\r\n')
         self._readbuf = lines.pop()
         
         # Do something useful here
@@ -295,10 +294,10 @@ class asyncNNTP(asyncore.dispatcher):
                 resp = line.split(None, 1)[0]
                 
                 # Welcome... post, no post
-                if resp in ('200', '201'):
+                if resp in (b'200', b'201'):
                     if self.username:
                         text = 'AUTHINFO USER %s\r\n' % (self.username)
-                        self.send(text)
+                        self.send(text.encode('utf8'))
                         self.logger.debug('%d: > AUTHINFO USER ********', self.connid)
                     else:
                         self.mode = MODE_COMMAND
@@ -306,22 +305,22 @@ class asyncNNTP(asyncore.dispatcher):
                         self.logger.debug('%d: ready.', self.connid)
                 
                 # Need password too
-                elif resp in ('381'):
+                elif resp in (b'381'):
                     if self.password:
                         text = 'AUTHINFO PASS %s\r\n' % (self.password)
-                        self.send(text)
+                        self.send(text.encode('utf8'))
                         self.logger.debug('%d: > AUTHINFO PASS ********', self.connid)
                     else:
                         self.really_close('need password!')
                 
                 # Auth ok
-                elif resp in ('281'):
+                elif resp in (b'281'):
                     self.mode = MODE_COMMAND
                     self.parent._idle.append(self)
                     self.logger.debug('%d: ready.', self.connid)
                 
                 # Auth failure
-                elif resp in ('502'):
+                elif resp in (b'502'):
                     self.really_close('authentication failure.')
                 
                 # Dunno
@@ -333,12 +332,12 @@ class asyncNNTP(asyncore.dispatcher):
             elif self.mode == MODE_POST_INIT:
                 resp = line.split(None, 1)[0]
                 # Posting is allowed
-                if resp == '340':
+                if resp == b'340':
                     self.mode = MODE_POST_DATA
                     
                     # TODO: use the suggested message-ID, will require some rethinking as to how
                     #       messages are constructed
-                    m = MSGID_RE.search(line)
+                    m = MSGID_RE.search(line.decode('utf8'))
                     if m:
                         self.logger.debug('%d: changing Message-ID to %s', self.connid, m.group(1))
                         self._article.headers['Message-ID'] = m.group(1)
@@ -350,7 +349,7 @@ class asyncNNTP(asyncore.dispatcher):
                     self.post_data()
                 
                 # Posting is not allowed
-                elif resp == '440':
+                elif resp == b'440':
                     self.mode = MODE_COMMAND
                     self.parent._idle.append(self)
                     del self._article
@@ -365,14 +364,14 @@ class asyncNNTP(asyncore.dispatcher):
             elif self.mode == MODE_POST_DONE:
                 resp = line.split(None, 1)[0]
                 # Ok
-                if resp == '240':
+                if resp == b'240':
                     #self.parent.post_success(self._article)
 
                     self.mode = MODE_COMMAND
                     self.parent._idle.append(self)
 
                 # Not ok
-                elif resp.startswith('44'):
+                elif resp.startswith(b'44'):
                     self.mode = MODE_COMMAND
                     self.parent._idle.append(self)
                     self.logger.warning('%d: posting failed - %s', self.connid, line)
@@ -393,7 +392,7 @@ class asyncNNTP(asyncore.dispatcher):
         self.logger.debug('post_article')
         self.mode = MODE_POST_INIT
         self._article = article
-        self.send('POST\r\n')
+        self.send(b'POST\r\n')
         self.logger.debug('%d: > POST', self.connid)
     
     def post_data(self):

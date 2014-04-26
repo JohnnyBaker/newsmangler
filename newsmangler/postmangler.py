@@ -27,6 +27,7 @@
 
 """Main class for posting stuff."""
 
+from __future__ import print_function
 import asyncore
 import logging
 import os
@@ -242,7 +243,7 @@ class PostMangler:
                     else:
                         rtime = 'inf.'
 
-                    print '%d article(s) remaining - time left %s  - %.1fKB/s     \r' % (left,rtime, speed),
+                    print('%d article(s) remaining - time left %s  - %.1fKB/s                \r' % (left,rtime, speed), end="")
                     sys.stdout.flush()
             
             # All done?

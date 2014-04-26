@@ -8,6 +8,7 @@ It supports SSL connection !
 Requirements
 ============
 
+Python 2.6 or newer (including Python 3).
 For SSL connection you will need OpenSSL:
 ``pip install python-openssl`` or ``sudo aptitude install python-openssl`` (debian/ubuntu)
 
@@ -41,3 +42,8 @@ The files will post as:
   ``test post please ignore [3/3] - "test.part2.rar" yEnc (01/27)``
 
 See ``python mangler.py --help`` for other options.
+
+Notes
+=====
+
+Upload using Python3 is slower (~20%) than using python2.
