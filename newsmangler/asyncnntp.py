@@ -34,7 +34,6 @@ import re
 import select
 import socket
 import time
-import ssl
 from nntplib import *
 import StringIO
 import tempfile

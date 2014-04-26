@@ -5,6 +5,12 @@ newsmangler is a basic client for posting binaries to Usenet. The only notable
 feature is multiple connection support to efficiently utilize modern bandwidth.
 It supports SSL connection !
 
+Requirements
+============
+
+For SSL connection you will need OpenSSL:
+``pip install python-openssl`` or ``sudo aptitude install python-openssl`` (debian/ubuntu)
+
 Installation
 ============
 #. Download the source: ``git clone git://github.com/nicors57/newsmangler.git``
