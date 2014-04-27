@@ -164,9 +164,9 @@ class asyncNNTP(asyncore.dispatcher):
                             self.socket.do_handshake()
                             break
                         except WantWriteError:
-                            select.select([self.socket], [], [], 1.0)
+                            select.select([self.socket], [], [], 0.1)
                         except WantReadError:
-                            select.select([self.socket], [], [], 1.0)
+                            select.select([self.socket], [], [], 0.1)
 
                 self.state = STATE_CONNECTING
                 self.logger.debug('%d: connecting to %s:%s', self.connid, self.host, self.port)
@@ -221,8 +221,17 @@ class asyncNNTP(asyncore.dispatcher):
             # We don't have any buffer, silly thing
             asyncore.poller.register(self._fileno, select.POLLIN)
             return
-        
-        sent = asyncore.dispatcher.send(self, self._writebuf[self._pointer:])
+
+        # Windows generate WantWriteError/WantReadError for SSL connection
+        while True:
+            try:
+                sent = asyncore.dispatcher.send(self, self._writebuf[self._pointer:])
+                break
+            except WantWriteError:
+                select.select([self.socket], [], [], 0.1)
+            except WantReadError:
+                select.select([self.socket], [], [], 0.1)
+
         self._pointer += sent
         
         # We've run out of data
