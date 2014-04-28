@@ -135,6 +135,7 @@ def main():
     poster = PostMangler(conf, options.debug)
     
     if options.profile:
+        # TODO: replace by cProfile (PY3 compatibility)
         import hotshot
         prof = hotshot.Profile('profile.poster')
         prof.runcall(poster.post, newsgroup, postme, post_title=post_title)
