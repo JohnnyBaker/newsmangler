@@ -72,8 +72,8 @@ class asyncNNTP(asyncore.dispatcher):
         self.reset()
     
     def reset(self):
-        self._readbuf = ''
-        self._writebuf = ''
+        self._readbuf = b''
+        self._writebuf = b''
         self._article = None
         self._pointer = 0
         
@@ -102,7 +102,7 @@ class asyncNNTP(asyncore.dispatcher):
         # Try to connect. This can blow up!
         try:
             self.connect((self.host, self.port))
-        except (socket.error, socket.gaierror), msg:
+        except (socket.error, socket.gaierror) as msg:
             self.really_close(msg)
         else:
             self.state = STATE_CONNECTING
@@ -160,7 +160,7 @@ class asyncNNTP(asyncore.dispatcher):
         
         # We've run out of data
         if self._pointer == len(self._writebuf):
-            self._writebuf = ''
+            self._writebuf = b''
             self._pointer = 0
             asyncore.poller.register(self._fileno, select.POLLIN)
         
@@ -209,27 +209,32 @@ class asyncNNTP(asyncore.dispatcher):
     def handle_read(self):
         try:
             self._readbuf += self.recv(16384)
-        except socket.error, msg:
+        except socket.error as msg:
             self.really_close(msg)
             return
         
-        # Split the buffer into lines. Last line is always incomplete.
-        lines = self._readbuf.split('\r\n')
-        self._readbuf = lines.pop()
         
+
+        # Split the buffer into lines. Last line is always incomplete/empty.
+        lines = str(self._readbuf.decode("utf-8"))
+        lines = lines.split('\r\n')
+        self._readbuf = lines.pop().encode('utf-8')
+
+
         # Do something useful here
         for line in lines:
-            self.logger.debug('%d: < %s', self.connid, line)
+            self.logger.debug('%d: < Mode:%d %s', self.connid, self.mode, line)
 
             # Initial login stuff
             if self.mode == MODE_AUTH:
+                self.logger.debug('%d: < %s', self.connid, "MODE_AUTH")
                 resp = line.split(None, 1)[0]
                 
                 # Welcome... post, no post
                 if resp in ('200', '201'):
                     if self.username:
                         text = 'AUTHINFO USER %s\r\n' % (self.username)
-                        self.send(text)
+                        self.send(text.encode('utf-8'))
                         self.logger.debug('%d: > AUTHINFO USER ********', self.connid)
                     else:
                         self.mode = MODE_COMMAND
@@ -240,7 +245,7 @@ class asyncNNTP(asyncore.dispatcher):
                 elif resp in ('381'):
                     if self.password:
                         text = 'AUTHINFO PASS %s\r\n' % (self.password)
-                        self.send(text)
+                        self.send(text.encode('utf-8'))
                         self.logger.debug('%d: > AUTHINFO PASS ********', self.connid)
                     else:
                         self.really_close('need password!')
@@ -262,6 +267,7 @@ class asyncNNTP(asyncore.dispatcher):
             
             # Posting a file
             elif self.mode == MODE_POST_INIT:
+                self.logger.debug('%d: < %s', self.connid, "MODE_POST_INIT")
                 resp = line.split(None, 1)[0]
                 # Posting is allowed
                 if resp == '340':
@@ -323,7 +329,7 @@ class asyncNNTP(asyncore.dispatcher):
     def post_article(self, article):
         self.mode = MODE_POST_INIT
         self._article = article
-        self.send('POST\r\n')
+        self.send('POST\r\n'.encode('utf-8'))
         self.logger.debug('%d: > POST', self.connid)
     
     def post_data(self):

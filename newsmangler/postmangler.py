@@ -34,7 +34,11 @@ import select
 import sys
 import time
 
-from cStringIO import StringIO
+try:
+	from cStringIO import StringIO
+except ImportError:
+	#python 3.x
+	from io import StringIO
 
 try:
     import xml.etree.cElementTree as ET
@@ -94,8 +98,11 @@ class PostMangler:
     # Connect all of our connections
     def connect(self):
         for i in range(self.conf['server']['connections']):
-            conn = asyncnntp.asyncNNTP(self, i, self.conf['server']['hostname'],
-                self.conf['server']['port'], None, self.conf['server']['username'],
+            conn = asyncnntp.asyncNNTP(self, i, 
+            	self.conf['server']['hostname'],
+                self.conf['server']['port'], 
+                None, 
+                self.conf['server']['username'],
                 self.conf['server']['password'],
             )
             conn.do_connect()
@@ -171,7 +178,7 @@ class PostMangler:
                     interval = time.time() - start
                     speed = self._bytes / interval / 1024
                     left = len(self._articles) + (len(self._conns) - len(self._idle))
-                    print '%d article(s) remaining - %.1fKB/s     \r' % (left, speed),
+                    print('%d article(s) remaining - %.1fKB/s     \r' % (left, speed))
                     sys.stdout.flush()
             
             # All done?
@@ -254,9 +261,9 @@ class PostMangler:
             # Build a subject
             real_filename = os.path.split(filename)[1]
             
-            temp = '%%0%sd' % (len(str(len(files))))
-            filenum = temp % (n)
-            temp = '%%0%sd' % (len(str(parts)))
+            temp = '%%0%sd' % len(str(len(files)))
+            filenum = temp % n
+            temp = '%%0%sd' % len(str(parts))
             subject = '%s [%s/%d] - "%s" yEnc (%s/%d)' % (
                 post_title, filenum, len(goodfiles), real_filename, temp, parts
             )
@@ -342,13 +349,13 @@ class PostMangler:
                     'subject': subject,
                 }
             )
-
+            
             # newsgroups
             groups = ET.SubElement(f, 'groups')
             for newsgroup in self.newsgroup.split(','):
                 group = ET.SubElement(groups, 'group')
                 group.text = newsgroup
-
+            
             # segments
             segments = ET.SubElement(f, 'segments')
             temp = [(m._partnum, m, article_size) for m, article_size in msgids]
@@ -362,7 +369,7 @@ class PostMangler:
                 )
                 segment.text = str(article.headers['Message-ID'][1:-1])
 
-        with open(filename, 'w') as nzbfile:
+        with open(filename, 'wb') as nzbfile:
             ET.ElementTree(root).write(nzbfile, xml_declaration=True)
 
         self.logger.info('End generation of %s', filename)

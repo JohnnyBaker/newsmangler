@@ -31,7 +31,7 @@
 
 import os
 import sys
-from ConfigParser import ConfigParser
+
 from optparse import OptionParser
 
 from newsmangler.common import ParseConfig
@@ -39,7 +39,7 @@ from newsmangler.postmangler import PostMangler
 
 # ---------------------------------------------------------------------------
 
-def main():
+def parseCmdLineOption():
 	# Parse our command line options
 	parser = OptionParser(usage='usage: %prog [options] dir1 dir2 ... dirN')
 	parser.add_option('-c', '--config',
@@ -48,7 +48,8 @@ def main():
 	)
 	parser.add_option('-f', '--files',
 		dest='files',
-		help='Assume all arguments are filenames instead of directories, and use SUBJECT as the base subject',
+		help='Assume all arguments are filenames instead of directories, \
+			and use SUBJECT as the base subject',
 		metavar='SUBJECT',
 	)
 	parser.add_option('-g', '--group',
@@ -80,6 +81,12 @@ def main():
 	if not args:
 		parser.print_help()
 		sys.exit(1)
+		
+	return (options, args)
+	
+
+def main():
+	(options, args) = parseCmdLineOption()
 	
 	# Make sure at least one of the args exists
 	postme = []
@@ -90,16 +97,16 @@ def main():
 			if os.path.isfile(arg):
 				postme.append(arg)
 			else:
-				print 'ERROR: "%s" does not exist or is not a file!' % (arg)
+				print('ERROR: "%s" does not exist or is not a file!' % (arg))
 	else:
 		for arg in args:
 			if os.path.isdir(arg):
 				postme.append(arg)
 			else:
-				print 'ERROR: "%s" does not exist or is not a file!' % (arg)
+				print('ERROR: "%s" does not exist or is not a file!' % (arg))
 	
 	if not postme:
-		print 'ERROR: no valid arguments provided on command line!'
+		print('ERROR: no valid arguments provided on command line!')
 		sys.exit(1)
 	
 	# Parse our configuration file
@@ -113,7 +120,7 @@ def main():
 		if '.' not in options.group:
 			newsgroup = conf['aliases'].get(options.group)
 			if not newsgroup:
-				print 'ERROR: group alias "%s" does not exist!' % (options.group)
+				print('ERROR: group alias "%s" does not exist!' % (options.group))
 				sys.exit(1)
 		else:
 			newsgroup = options.group

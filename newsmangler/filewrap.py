@@ -37,7 +37,15 @@ class FileWrap:
 		self._file = None
 
 		self.logger = logging.getLogger('mangler')
+		
+	def __del__(self):
+		self._closeFile()
 
+	def _closeFile(self):
+		if self._file:
+			self.logger.debug('%s read_part close file', self._filepath)
+			self._file.close()
+		
 	def read_part(self, begin, end):
 		self.logger.debug('%s read_part %d %d', self._filepath, begin, end)
 
@@ -53,8 +61,7 @@ class FileWrap:
 		# If this was the last part we should close the file
 		self._parts -= 1
 		if self._parts == 0:
-			self.logger.debug('%s read_part close file', self._filepath)
-			self._file.close()
+			self._closeFile()
 
 		# Return the data
 		return data

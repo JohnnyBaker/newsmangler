@@ -27,19 +27,23 @@
 
 """Various miscellaneous useful functions."""
 
-NM_VERSION = '0.1.0git'
+NM_VERSION = '0.1.1git'
 
 import os
 import sys
 
-from ConfigParser import ConfigParser
+try:
+	#Python version <3.x
+	from ConfigParser import ConfigParser
+except ImportError:
+	from configparser import ConfigParser
 
 # ---------------------------------------------------------------------------
 # Parse our configuration file
 def ParseConfig(cfgfile='~/.newsmangler.conf'):
 	configfile = os.path.expanduser(cfgfile)
 	if not os.path.isfile(configfile):
-		print 'ERROR: config file "%s" is missing!' % (configfile)
+		print('ERROR: config file "%s" is missing!' % (configfile))
 		sys.exit(1)
 	
 	c = ConfigParser()
