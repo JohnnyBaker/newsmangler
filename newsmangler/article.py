@@ -27,58 +27,58 @@
 
 from collections import OrderedDict
 try:
-	from cStringIO import StringIO as BytesIO
+    from cStringIO import StringIO as BytesIO
 except ImportError:
-	#python 3.x
-	from io import BytesIO
+    #python 3.x
+    from io import BytesIO
 
 from newsmangler.yenc import yEncode
 
 class Article:
-	def __init__(self, filewrap, begin, end, fileinfo, subject, partnum):
-		self._filewrap = filewrap
-		self._begin = begin
-		self._end = end
-		self._fileinfo = fileinfo
-		self._subject = subject
-		self._partnum = partnum
-		
-		self.headers = OrderedDict()
-		self.postfile = BytesIO()
+    def __init__(self, filewrap, begin, end, fileinfo, subject, partnum):
+        self._filewrap = filewrap
+        self._begin = begin
+        self._end = end
+        self._fileinfo = fileinfo
+        self._subject = subject
+        self._partnum = partnum
+        
+        self.headers = OrderedDict()
+        self.postfile = BytesIO()
 
-		self.__article_size = 0
+        self.__article_size = 0
 
-	def prepare(self):
-		# Don't prepare again if we already did everything
-		if self.__article_size > 0:
-			self.postfile.seek(0, 0)
-			return self.__article_size
+    def prepare(self):
+        # Don't prepare again if we already did everything
+        if self.__article_size > 0:
+            self.postfile.seek(0, 0)
+            return self.__article_size
 
-		# Headers
-		for k, v in self.headers.items():
-			self.postfile.write( ('%s: %s\r\n' % (k, v)).encode('utf-8') )
-		
-		self.postfile.write(b'\r\n')
-		
-		# yEnc start
-		line = '=ybegin part=%d total=%d line=128 size=%d name=%s\r\n' % (
-			self._partnum, self._fileinfo['parts'], self._fileinfo['filesize'], self._fileinfo['filename']
-		)
-		self.postfile.write(line.encode('utf-8'))
-		line = '=ypart begin=%d end=%d\r\n' % (self._begin + 1, self._end)
-		self.postfile.write(line.encode('utf-8'))
-		
-		# yEnc data
-		data = self._filewrap.read_part(self._begin, self._end)
-		partcrc = yEncode(self.postfile, data)
+        # Headers
+        for k, v in self.headers.items():
+            self.postfile.write( ('%s: %s\r\n' % (k, v)).encode('utf-8') )
+        
+        self.postfile.write(b'\r\n')
+        
+        # yEnc start
+        line = '=ybegin part=%d total=%d line=128 size=%d name=%s\r\n' % (
+            self._partnum, self._fileinfo['parts'], self._fileinfo['filesize'], self._fileinfo['filename']
+        )
+        self.postfile.write(line.encode('utf-8'))
+        line = '=ypart begin=%d end=%d\r\n' % (self._begin + 1, self._end)
+        self.postfile.write(line.encode('utf-8'))
+        
+        # yEnc data
+        data = self._filewrap.read_part(self._begin, self._end)
+        partcrc = yEncode(self.postfile, data)
 
-		# yEnc end
-		line = '=yend size=%d part=%d pcrc32=%s\r\n' % (self._end - self._begin, self._partnum, partcrc)
-		self.postfile.write(line.encode('utf-8'))
-		
-		# And done writing for now
-		self.postfile.write('.\r\n'.encode('utf-8'))
-		self.__article_size = self.postfile.tell()
-		self.postfile.seek(0, 0)
+        # yEnc end
+        line = '=yend size=%d part=%d pcrc32=%s\r\n' % (self._end - self._begin, self._partnum, partcrc)
+        self.postfile.write(line.encode('utf-8'))
+        
+        # And done writing for now
+        self.postfile.write('.\r\n'.encode('utf-8'))
+        self.__article_size = self.postfile.tell()
+        self.postfile.seek(0, 0)
 
-		return self.__article_size
+        return self.__article_size

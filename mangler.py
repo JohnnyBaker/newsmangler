@@ -40,116 +40,116 @@ from newsmangler.postmangler import PostMangler
 # ---------------------------------------------------------------------------
 
 def parseCmdLineOption():
-	# Parse our command line options
-	parser = OptionParser(usage='usage: %prog [options] dir1 dir2 ... dirN')
-	parser.add_option('-c', '--config',
-		dest='config',
-		help='Specify a different config file location',
-	)
-	parser.add_option('-f', '--files',
-		dest='files',
-		help='Assume all arguments are filenames instead of directories, \
-			and use SUBJECT as the base subject',
-		metavar='SUBJECT',
-	)
-	parser.add_option('-g', '--group',
-		dest='group',
-		help='Post to a different group than the default',
-	)
-	# parser.add_option('-p', '--par2',
-	# 	dest='generate_par2',
-	# 	action='store_true',
-	# 	default=False,
-	# 	help="Generate PAR2 files in the background if they don't exist already.",
-	# )
-	parser.add_option('-d', '--debug',
-		dest='debug',
-		action='store_true',
-		default=False,
-		help="Enable debug logging",
-	)
-	parser.add_option('--profile',
-		dest='profile',
-		action='store_true',
-		default=False,
-		help='Run with the hotshot profiler (measures execution time of functions)',
-	)
+    # Parse our command line options
+    parser = OptionParser(usage='usage: %prog [options] dir1 dir2 ... dirN')
+    parser.add_option('-c', '--config',
+        dest='config',
+        help='Specify a different config file location',
+    )
+    parser.add_option('-f', '--files',
+        dest='files',
+        help='Assume all arguments are filenames instead of directories, \
+            and use SUBJECT as the base subject',
+        metavar='SUBJECT',
+    )
+    parser.add_option('-g', '--group',
+        dest='group',
+        help='Post to a different group than the default',
+    )
+    # parser.add_option('-p', '--par2',
+    #     dest='generate_par2',
+    #     action='store_true',
+    #     default=False,
+    #     help="Generate PAR2 files in the background if they don't exist already.",
+    # )
+    parser.add_option('-d', '--debug',
+        dest='debug',
+        action='store_true',
+        default=False,
+        help="Enable debug logging",
+    )
+    parser.add_option('--profile',
+        dest='profile',
+        action='store_true',
+        default=False,
+        help='Run with the hotshot profiler (measures execution time of functions)',
+    )
 
-	(options, args) = parser.parse_args()
-	
-	# No args? We have nothing to do!
-	if not args:
-		parser.print_help()
-		sys.exit(1)
-		
-	return (options, args)
-	
+    (options, args) = parser.parse_args()
+    
+    # No args? We have nothing to do!
+    if not args:
+        parser.print_help()
+        sys.exit(1)
+        
+    return (options, args)
+    
 
 def main():
-	(options, args) = parseCmdLineOption()
-	
-	# Make sure at least one of the args exists
-	postme = []
-	post_title = None
-	if options.files:
-		post_title = options.files
-		for arg in args:
-			if os.path.isfile(arg):
-				postme.append(arg)
-			else:
-				print('ERROR: "%s" does not exist or is not a file!' % (arg))
-	else:
-		for arg in args:
-			if os.path.isdir(arg):
-				postme.append(arg)
-			else:
-				print('ERROR: "%s" does not exist or is not a file!' % (arg))
-	
-	if not postme:
-		print('ERROR: no valid arguments provided on command line!')
-		sys.exit(1)
-	
-	# Parse our configuration file
-	if options.config:
-		conf = ParseConfig(options.config)
-	else:
-		conf = ParseConfig()
-	
-	# Make sure the group is ok
-	if options.group:
-		if '.' not in options.group:
-			newsgroup = conf['aliases'].get(options.group)
-			if not newsgroup:
-				print('ERROR: group alias "%s" does not exist!' % (options.group))
-				sys.exit(1)
-		else:
-			newsgroup = options.group
-	else:
-		newsgroup = conf['posting']['default_group']
-	
-	# Strip whitespace from the newsgroup list to obey RFC1036
-	for c in (' \t'):
-		newsgroup = newsgroup.replace(c, '')
-	
-	# And off we go
-	poster = PostMangler(conf, options.debug)
-	
-	if options.profile:
-		import hotshot
-		prof = hotshot.Profile('profile.poster')
-		prof.runcall(poster.post, newsgroup, postme, post_title=post_title)
-		prof.close()
-		
-		import hotshot.stats
-		stats = hotshot.stats.load('profile.poster')
-		stats.strip_dirs()
-		stats.sort_stats('time', 'calls')
-		stats.print_stats(25)
-	
-	else:
-		poster.post(newsgroup, postme, post_title=post_title)
+    (options, args) = parseCmdLineOption()
+    
+    # Make sure at least one of the args exists
+    postme = []
+    post_title = None
+    if options.files:
+        post_title = options.files
+        for arg in args:
+            if os.path.isfile(arg):
+                postme.append(arg)
+            else:
+                print('ERROR: "%s" does not exist or is not a file!' % (arg))
+    else:
+        for arg in args:
+            if os.path.isdir(arg):
+                postme.append(arg)
+            else:
+                print('ERROR: "%s" does not exist or is not a file!' % (arg))
+    
+    if not postme:
+        print('ERROR: no valid arguments provided on command line!')
+        sys.exit(1)
+    
+    # Parse our configuration file
+    if options.config:
+        conf = ParseConfig(options.config)
+    else:
+        conf = ParseConfig()
+    
+    # Make sure the group is ok
+    if options.group:
+        if '.' not in options.group:
+            newsgroup = conf['aliases'].get(options.group)
+            if not newsgroup:
+                print('ERROR: group alias "%s" does not exist!' % (options.group))
+                sys.exit(1)
+        else:
+            newsgroup = options.group
+    else:
+        newsgroup = conf['posting']['default_group']
+    
+    # Strip whitespace from the newsgroup list to obey RFC1036
+    for c in (' \t'):
+        newsgroup = newsgroup.replace(c, '')
+    
+    # And off we go
+    poster = PostMangler(conf, options.debug)
+    
+    if options.profile:
+        import hotshot
+        prof = hotshot.Profile('profile.poster')
+        prof.runcall(poster.post, newsgroup, postme, post_title=post_title)
+        prof.close()
+        
+        import hotshot.stats
+        stats = hotshot.stats.load('profile.poster')
+        stats.strip_dirs()
+        stats.sort_stats('time', 'calls')
+        stats.print_stats(25)
+    
+    else:
+        poster.post(newsgroup, postme, post_title=post_title)
 
 # ---------------------------------------------------------------------------
 
 if __name__ == '__main__':
-	main()
+    main()

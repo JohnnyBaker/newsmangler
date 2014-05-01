@@ -30,38 +30,38 @@
 import logging
 
 class FileWrap:
-	def __init__(self, filepath, parts):
-		self._filepath = filepath
-		self._parts = parts
-		
-		self._file = None
+    def __init__(self, filepath, parts):
+        self._filepath = filepath
+        self._parts = parts
+        
+        self._file = None
 
-		self.logger = logging.getLogger('mangler')
-		
-	def __del__(self):
-		self._closeFile()
+        self.logger = logging.getLogger('mangler')
+        
+    def __del__(self):
+        self._closeFile()
 
-	def _closeFile(self):
-		if self._file:
-			self.logger.debug('%s read_part close file', self._filepath)
-			self._file.close()
-		
-	def read_part(self, begin, end):
-		self.logger.debug('%s read_part %d %d', self._filepath, begin, end)
+    def _closeFile(self):
+        if self._file:
+            self.logger.debug('%s read_part close file', self._filepath)
+            self._file.close()
+        
+    def read_part(self, begin, end):
+        self.logger.debug('%s read_part %d %d', self._filepath, begin, end)
 
-		# Open the file if it's not already open
-		if self._file is None:
-			self.logger.debug('%s read_part open file', self._filepath)
-			self._file = open(self._filepath, 'rb')
+        # Open the file if it's not already open
+        if self._file is None:
+            self.logger.debug('%s read_part open file', self._filepath)
+            self._file = open(self._filepath, 'rb')
 
-		# Seek to the right position and read the data
-		self._file.seek(begin, 0)
-		data = self._file.read(end - begin)
+        # Seek to the right position and read the data
+        self._file.seek(begin, 0)
+        data = self._file.read(end - begin)
 
-		# If this was the last part we should close the file
-		self._parts -= 1
-		if self._parts == 0:
-			self._closeFile()
+        # If this was the last part we should close the file
+        self._parts -= 1
+        if self._parts == 0:
+            self._closeFile()
 
-		# Return the data
-		return data
+        # Return the data
+        return data

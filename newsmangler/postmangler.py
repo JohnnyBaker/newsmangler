@@ -35,10 +35,10 @@ import sys
 import time
 
 try:
-	from cStringIO import StringIO
+    from cStringIO import StringIO
 except ImportError:
-	#python 3.x
-	from io import StringIO
+    #python 3.x
+    from io import StringIO
 
 try:
     import xml.etree.cElementTree as ET
@@ -99,7 +99,7 @@ class PostMangler:
     def connect(self):
         for i in range(self.conf['server']['connections']):
             conn = asyncnntp.asyncNNTP(self, i, 
-            	self.conf['server']['hostname'],
+                self.conf['server']['hostname'],
                 self.conf['server']['port'], 
                 None, 
                 self.conf['server']['username'],
@@ -172,7 +172,7 @@ class PostMangler:
                 last_stuff = now
                 
                 for conn in self._conns:
-                	conn.reconnect_check(now)
+                    conn.reconnect_check(now)
                 
                 if self._bytes:
                     interval = time.time() - start

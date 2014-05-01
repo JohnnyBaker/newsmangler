@@ -111,8 +111,8 @@ class asyncNNTP(asyncore.dispatcher):
     # -----------------------------------------------------------------------
     # Check to see if it's time to reconnect yet
     def reconnect_check(self, now):
-    	if self.state == STATE_DISCONNECTED and now >= self.reconnect_at:
-        	self.do_connect()
+        if self.state == STATE_DISCONNECTED and now >= self.reconnect_at:
+            self.do_connect()
 
     def add_channel(self, map=None):
         self.logger.debug('%d: adding FD %d to poller', self.connid, self._fileno)

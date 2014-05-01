@@ -33,39 +33,39 @@ import os
 import sys
 
 try:
-	#Python version <3.x
-	from ConfigParser import ConfigParser
+    #Python version <3.x
+    from ConfigParser import ConfigParser
 except ImportError:
-	from configparser import ConfigParser
+    from configparser import ConfigParser
 
 # ---------------------------------------------------------------------------
 # Parse our configuration file
 def ParseConfig(cfgfile='~/.newsmangler.conf'):
-	configfile = os.path.expanduser(cfgfile)
-	if not os.path.isfile(configfile):
-		print('ERROR: config file "%s" is missing!' % (configfile))
-		sys.exit(1)
-	
-	c = ConfigParser()
-	c.read(configfile)
-	conf = {}
-	for section in c.sections():
-		conf[section] = {}
-		for option in c.options(section):
-			v = c.get(section, option)
-			if v.isdigit():
-				v = int(v)
-			conf[section][option] = v
-	
-	return conf
+    configfile = os.path.expanduser(cfgfile)
+    if not os.path.isfile(configfile):
+        print('ERROR: config file "%s" is missing!' % (configfile))
+        sys.exit(1)
+    
+    c = ConfigParser()
+    c.read(configfile)
+    conf = {}
+    for section in c.sections():
+        conf[section] = {}
+        for option in c.options(section):
+            v = c.get(section, option)
+            if v.isdigit():
+                v = int(v)
+            conf[section][option] = v
+    
+    return conf
 
 # ---------------------------------------------------------------------------
 # Come up with a 'safe' filename
 def SafeFilename(filename):
-	safe_filename = os.path.basename(filename)
-	for char in [' ', "\\", '|', '/', ':', '*', '?', '<', '>']:
-		safe_filename = safe_filename.replace(char, '_')
-	return safe_filename
+    safe_filename = os.path.basename(filename)
+    for char in [' ', "\\", '|', '/', ':', '*', '?', '<', '>']:
+        safe_filename = safe_filename.replace(char, '_')
+    return safe_filename
 
 # ---------------------------------------------------------------------------
 # Return a nicely formatted size
