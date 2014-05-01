@@ -114,6 +114,7 @@ class asyncNNTP(asyncore.dispatcher):
         self.username = username
         self.password = password
         self.ssl = ssl
+        self._handshake_done = False
         
         self.reset()
     
@@ -162,6 +163,7 @@ class asyncNNTP(asyncore.dispatcher):
                     while True:
                         try:
                             self.socket.do_handshake()
+                            self._handshake_done = True
                             break
                         except WantWriteError:
                             select.select([self.socket], [], [], 0.1)
@@ -211,7 +213,7 @@ class asyncNNTP(asyncore.dispatcher):
     # buffer.
     def writable(self):
         self.logger.debug('writable')
-        return (not self.connected) or len(self._writebuf)
+        return (self._handshake_done and (not self.connected) or len(self._writebuf)
     
     # Send some data from our buffer when we can write
     def handle_write(self):
