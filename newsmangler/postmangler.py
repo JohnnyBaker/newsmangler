@@ -435,9 +435,27 @@ class PostMangler:
                 )
                 segment.text = str(article.headers['Message-ID'][1:-1])
 
-        with open(filename, 'wb') as nzbfile:
-            ET.ElementTree(root).write(nzbfile, xml_declaration=True)
+        # pretty print
+        def indent(elem, level=0):
+            i = "\n" + level*"  "
+            if len(elem):
+                if not elem.text or not elem.text.strip():
+                    elem.text = i + "  "
+                if not elem.tail or not elem.tail.strip():
+                    elem.tail = i
+                for elem in elem:
+                    indent(elem, level+1)
+                if not elem.tail or not elem.tail.strip():
+                    elem.tail = i
+            else:
+                if level and (not elem.tail or not elem.tail.strip()):
+                    elem.tail = i
 
+
+        with open(filename, 'wb') as nzbfile:
+            indent(root)
+            ET.ElementTree(root).write(nzbfile, xml_declaration=True)
+            
         self.logger.info('End generation of %s', filename)
 
 # ---------------------------------------------------------------------------
