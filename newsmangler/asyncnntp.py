@@ -37,6 +37,7 @@ import time
 from nntplib import *
 import tempfile
 import sys
+import traceback
 
 
 # ---------------------------------------------------------------------------
@@ -46,10 +47,12 @@ try:
     _ssl = SSL
     WantReadError = _ssl.WantReadError
     WantWriteError = _ssl.WantWriteError
+    ZeroReturnError = _ssl.ZeroReturnError
     del SSL
     HAVE_SSL = True
 
 except ImportError:
+    print("SSL Import error !")
     _ssl = None
     HAVE_SSL = False
 
@@ -171,9 +174,11 @@ class asyncNNTP(asyncore.dispatcher):
                 self._handshake_done = True
                 break
             except WantWriteError:
-                select.select([self.socket], [], [])
+                select.select([], [self.socket], [])
             except WantReadError:
                 select.select([self.socket], [], [])
+            except Exception as e:
+                raise e
 
     def handle_connect(self):
         self.status = STATE_CONNECTED
@@ -257,7 +262,7 @@ class asyncNNTP(asyncore.dispatcher):
                 sent = asyncore.dispatcher.send(self, self._writebuf[self._pointer:])
                 break
             except WantWriteError:
-                select.select([self.socket], [], [])
+                select.select([], [self.socket], [])
             except WantReadError:
                 select.select([self.socket], [], [])
 
@@ -295,9 +300,12 @@ class asyncNNTP(asyncore.dispatcher):
     def handle_read(self):
         self.logger.debug('handle_read')
         try:
-            self._readbuf = b"".join([self._readbuf,self.recv(16384)])
+            self._readbuf = b"".join([self._readbuf,self.recv(POST_BUFFER_MIN)])
         except socket.error as msg:
             self.really_close(msg)
+            return
+        except ZeroReturnError:
+            self.really_close("ZeroReturnError")
             return
         
         # Split the buffer into lines. Last line is always incomplete.
@@ -341,7 +349,7 @@ class asyncNNTP(asyncore.dispatcher):
                 # Auth failure
                 elif resp in (b'502'):
                     self.really_close('authentication failure.')
-                    self.logger.error('%d: %s', line)
+                    self.logger.error('%d: %s', self.connid, line)
                 
                 # Dunno
                 else:
@@ -423,10 +431,6 @@ class asyncNNTP(asyncore.dispatcher):
             self._article.postfile.close()
             self._article.postfile = None
         
-        if len(data) > 0:
-            f = open('/tmp/test','wb')
-            f.write(data)
-            f.close()
         self.send(data)
 
 # ---------------------------------------------------------------------------
