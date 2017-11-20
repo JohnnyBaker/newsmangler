@@ -139,7 +139,8 @@ class PostMangler:
                     obj.handle_expt_event()
             except (asyncore.ExitNow, KeyboardInterrupt, SystemExit):
                 raise
-            except:
+            except Exception as e:
+                self.logger.exception(traceback.format_exc())
                 obj.handle_error()
 
     # -----------------------------------------------------------------------

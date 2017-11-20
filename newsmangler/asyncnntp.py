@@ -37,6 +37,7 @@ import time
 from nntplib import *
 import tempfile
 import sys
+import traceback
 
 
 # ---------------------------------------------------------------------------
@@ -46,10 +47,12 @@ try:
     _ssl = SSL
     WantReadError = _ssl.WantReadError
     WantWriteError = _ssl.WantWriteError
+    ZeroReturnError = _ssl.ZeroReturnError
     del SSL
     HAVE_SSL = True
 
 except ImportError:
+    print("SSL Import error !")
     _ssl = None
     HAVE_SSL = False
 
@@ -126,6 +129,7 @@ class asyncNNTP(asyncore.dispatcher):
         self.reconnect_at = 0
         self.mode = MODE_AUTH
         self.state = STATE_DISCONNECTED
+        self._handshake_done = False
 
     def do_connect(self):
         # Create the socket
@@ -156,22 +160,48 @@ class asyncNNTP(asyncore.dispatcher):
             except (socket.error, socket.gaierror) as msg:
                 self.really_close(msg)
             else:
-                # Handshake
-                if self.ssl:
-                    # Waiting socket wants read and write
-                    while True:
-                        try:
-                            self.socket.do_handshake()
-                            break
-                        except WantWriteError:
-                            select.select([self.socket], [], [], 0.1)
-                        except WantReadError:
-                            select.select([self.socket], [], [], 0.1)
-
                 self.state = STATE_CONNECTING
                 self.logger.debug('%d: connecting to %s:%s', self.connid, self.host, self.port)
 
             break       
+    
+    def do_handshake(self):
+        self.logger.debug('%d: doing handshake!', self.connid)
+        # Waiting socket wants read and write
+        while True:
+            try:
+                self.socket.do_handshake()
+                self._handshake_done = True
+                break
+            except WantWriteError:
+                select.select([], [self.socket], [])
+            except WantReadError:
+                select.select([self.socket], [], [])
+            except Exception as e:
+                raise e
+
+    def handle_connect(self):
+        self.status = STATE_CONNECTED
+        self.logger.debug('%d: connected!', self.connid)
+        # Handshake
+        if self.ssl:
+            self.do_handshake()
+    
+    def handle_close(self):
+        self.really_close()
+    
+    def really_close(self, error=None):
+        self.mode = MODE_COMMAND
+        self.status = STATE_DISCONNECTED
+        
+        self.close()
+        self.reset()
+        
+        if error and hasattr(error, 'args'):
+            self.logger.warning('%d: %s!', self.connid, error.args[1])
+            self.reconnect_at = time.time() + self.parent.conf['server']['reconnect_delay']
+        else:
+            self.logger.warning('%d: Connection closed: %s', self.connid, error)
     
     # -----------------------------------------------------------------------
     # Check to see if it's time to reconnect yet
@@ -210,8 +240,12 @@ class asyncNNTP(asyncore.dispatcher):
     # We only want to be writable if we're connecting, or something is in our
     # buffer.
     def writable(self):
-        self.logger.debug('writable')
+        if self.ssl:
+            return self._handshake_done and (not self.connected) or len(self._writebuf)
         return (not self.connected) or len(self._writebuf)
+
+    def readable(self):
+        return self._handshake_done if self.ssl else True
     
     # Send some data from our buffer when we can write
     def handle_write(self):
@@ -222,15 +256,15 @@ class asyncNNTP(asyncore.dispatcher):
             asyncore.poller.register(self._fileno, select.POLLIN)
             return
 
-        # Windows generate WantWriteError/WantReadError for SSL connection
+        # Windows generates WantWriteError/WantReadError for SSL connection
         while True:
             try:
                 sent = asyncore.dispatcher.send(self, self._writebuf[self._pointer:])
                 break
             except WantWriteError:
-                select.select([self.socket], [], [], 0.1)
+                select.select([], [self.socket], [])
             except WantReadError:
-                select.select([self.socket], [], [], 0.1)
+                select.select([self.socket], [], [])
 
         self._pointer += sent
         
@@ -258,36 +292,20 @@ class asyncNNTP(asyncore.dispatcher):
     
     def handle_error(self):
         self.logger.exception('%d: unhandled exception!', self.connid)
+        self.logger.exception("Exception: %s", traceback.format_exc())
     
     # -----------------------------------------------------------------------
-    
-    def handle_connect(self):
-        self.status = STATE_CONNECTED
-        self.logger.debug('%d: connected!', self.connid)
-    
-    def handle_close(self):
-        self.really_close()
-    
-    def really_close(self, error=None):
-        self.mode = MODE_COMMAND
-        self.status = STATE_DISCONNECTED
-        
-        self.close()
-        self.reset()
-        
-        if error and hasattr(error, 'args'):
-            self.logger.warning('%d: %s!', self.connid, error.args[1])
-            self.reconnect_at = time.time() + self.parent.conf['server']['reconnect_delay']
-        else:
-            self.logger.warning('%d: Connection closed: %s', self.connid, error)
-    
+
     # There is some data waiting to be read
     def handle_read(self):
         self.logger.debug('handle_read')
         try:
-            self._readbuf = b"".join([self._readbuf,self.recv(16384)])
+            self._readbuf = b"".join([self._readbuf,self.recv(POST_BUFFER_MIN)])
         except socket.error as msg:
             self.really_close(msg)
+            return
+        except ZeroReturnError:
+            self.really_close("ZeroReturnError")
             return
         
         # Split the buffer into lines. Last line is always incomplete.
@@ -331,6 +349,7 @@ class asyncNNTP(asyncore.dispatcher):
                 # Auth failure
                 elif resp in (b'502'):
                     self.really_close('authentication failure.')
+                    self.logger.error('%d: %s', self.connid, line)
                 
                 # Dunno
                 else:
@@ -412,10 +431,6 @@ class asyncNNTP(asyncore.dispatcher):
             self._article.postfile.close()
             self._article.postfile = None
         
-        if len(data) > 0:
-            f = open('/tmp/test','wb')
-            f.write(data)
-            f.close()
         self.send(data)
 
 # ---------------------------------------------------------------------------
