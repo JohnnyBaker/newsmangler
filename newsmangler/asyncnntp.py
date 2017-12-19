@@ -148,7 +148,7 @@ class asyncNNTP(asyncore.dispatcher):
             # Try to set our send buffer a bit larger
             for i in range(17, 13, -1):
                 try:
-                    self.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 2**i)
+                    self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 2**i)
                 except socket.error:
                     continue
                 else:
