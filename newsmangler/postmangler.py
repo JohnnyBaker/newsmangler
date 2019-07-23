@@ -398,19 +398,19 @@ class PostMangler:
     ### START_DOCMOD ###
     ### NEW_DOCMOD ###
     # -----------------------------------------------------------------------
-      def generate_filename_for_nzb(self):
-          extra = self.conf['extra']
-          safe_filename = SafeFilename(self._current_dir)
-          if (extra['md5']):
-              import hashlib
-              return '%s.nzb' % (hashlib.md5(safe_filename.encode()).hexdigest())
-          elif (extra['uuid_suffix']):
-              import uuid
-              return '%s_%s.nzb' % (safe_filename, uuid.uuid4().hex)
-          elif (extra['custom_suffix']):
-              return '%s_%s.nzb' % (safe_filename, extra['custom_suffix'])
-          else:
-              return '%s.nzb' % (safe_filename)
+    def generate_filename_for_nzb(self):
+        extra = self.conf['extra']
+        safe_filename = SafeFilename(self._current_dir)
+        if (extra['md5']):
+            import hashlib
+            return '%s.nzb' % (hashlib.md5(safe_filename.encode()).hexdigest())
+        elif (extra['uuid_suffix']):
+            import uuid
+            return '%s_%s.nzb' % (safe_filename, uuid.uuid4().hex)
+        elif (extra['custom_suffix']):
+            return '%s_%s.nzb' % (safe_filename, extra['custom_suffix'])
+        else:
+            return '%s.nzb' % (safe_filename)
     ### END_DOCMOD ###
     
     # -----------------------------------------------------------------------
