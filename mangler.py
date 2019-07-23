@@ -42,6 +42,23 @@ from newsmangler.postmangler import PostMangler
 def parseCmdLineOption():
     # Parse our command line options
     parser = OptionParser(usage='usage: %prog [options] dir1 dir2 ... dirN')
+    ### START_DOCMOD ###
+    ### NEW_DOCMOD ###
+    parser.add_option('-s', '--suffix',
+        dest='custom_suffix',
+        help='append argument here to append the argument string to the filename',
+    )
+    parser.add_option('-U', '--md5',
+        dest='md5',
+        help='set this switch without argument to generate nzb filename equal to md5(DIRECTORY).nzb',
+        action="store_true",
+    )
+    parser.add_option('-u', '--uuid',
+        dest='uuid_suffix',
+        help='set this switch without argument to automatically append unique id to the filename',
+        action="store_true",
+    )
+    ### END_DOCMOD ###
     parser.add_option('-c', '--config',
         dest='config',
         help='Specify a different config file location',
@@ -114,6 +131,15 @@ def main():
         conf = ParseConfig(options.config)
     else:
         conf = ParseConfig()
+
+    ### START_DOCMOD ###
+    ### NEW_DOCMOD ###
+    # Add suffix option to the conf
+    conf['extra'] = {}
+    conf['extra']['uuid_suffix'] = options.uuid_suffix
+    conf['extra']['custom_suffix'] = options.custom_suffix
+    conf['extra']['md5'] = options.md5
+    ### END_DOCMOD ###
     
     # Make sure the group is ok
     if options.group:
