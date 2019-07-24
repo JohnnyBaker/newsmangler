@@ -408,7 +408,8 @@ class PostMangler:
             import uuid
             return '%s_%s.nzb' % (safe_filename, uuid.uuid4().hex)
         elif (extra['custom_suffix']):
-            return '%s_%s.nzb' % (safe_filename, extra['custom_suffix'])
+            return '%s.nzb' % (extra['custom_suffix'])
+            # return '%s_%s.nzb' % (safe_filename, extra['custom_suffix'])
         else:
             return '%s.nzb' % (safe_filename)
     ### END_DOCMOD ###
